@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+      crossorigin="anonymous"
+    ></script>
+    <link rel="stylesheet" href="./static/loginstyle.css" />
+    <title>Document</title>
+
+    <!-- // leaflet css  -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    
+    <style>
+#map-container {
+    position: fixed;
+    top: 10%;
+    right: 0;
+    bottom: 0;
+    width: 50%; /* Set the width of the map container */
+    z-index: 1;
+}
+
+#map {
+    height: calc(100% - 10%); /* Set the height of the map to fill the container */
+}
+
+  </style>
+
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-green">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <img src="./static/images/bandim.png" alt="bandim_image" class="logo" />
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavAltMarkup"
+          aria-controls="navbarNavAltMarkup"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+          <div class="navbar-nav">
+            <a class="nav-link active" aria-current="page" href="index.html">Routing</a>
+            <a class="nav-link" href="coworkers.html">Coworkers</a>
+            <a class="nav-link" href="patients.html">Patients</a>
+            <a class="nav-link" href="guidelines.html">Guidelines/Contact</a>
+
+            <button type="button" class="btn btn-logout d-lg-none" onclick="logout()">Logout</button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-logout ml-auto btn-outline-dark d-none d-lg-block" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+    
+  <div class="elements">
+    <div class="slidecontainer">
+      <input type="range" min="1" max="10" value="1" class="slider" id="myRange">
+      <p>Coworkers: <span id="demo"></span></p>
+
+      <select id="routes"></select>
+
+    </div>
+    </div>
+  </div>
+
+  <div id="myDIV" class="header">
+    <h2>Location list</h2>
+    <div class="input-container">
+      <input type="text" id="myInput1" placeholder="latitude" />
+      <input type="text" id="myInput2" placeholder="longitude" />
+      <input type="text" id="myInput3" placeholder="demand" />
+      <input type="text" id="myInput4" placeholder="depot" />
+      <button id="add-location">Add</button>
+    </div>
+
+    <ul id="myUL">
+      <!-- Display some dummy data for illustrational purposes  -->
+      <li>{ "latitude": 1, "longitude": 0}</li>
+    </ul>
+
+      <button id="submit-location-data">Send Request to Backend</button>
+      <button id="clear-location-data">Clear Location List</button>
+  </div>
+  
+  <h6 id="userDataHeader">Retrieve User Data</h2>
+    <button id="fetchUserData" class="get-token">Fetch User Data</button>
+    <pre id="responseDisplay"></pre>
+
+  <div id="map-container">
+      <div id="map"></div>
+  </div>
+
+    <footer class="footer2">Bandim Health Project © 2021</footer>
+
+    <script>
+  let slider = document.getElementById("myRange");
+  let output = document.getElementById("demo");
+  output.innerHTML = slider.value;
+
+  slider.oninput = function() {
+  output.innerHTML = this.value;
+}
+    </script>
+
+<script>
+  function updateDropdownOptions() {
+    let rangeValue = document.getElementById("myRange").value;
+    let dropdown = document.getElementById("routes");
+    dropdown.innerHTML = "";
+
+    /* loop from 1 to the value of the slider */
+    for (let i = 1; i <= rangeValue; i++) {
+      /* create an option element with text add it to the dropdown menu*/
+      dropdown.add(new Option("Route " + i, "option" + i));
+    }
+  }
+  /* eventlistener function when the range slide value changes and then call the functions*/
+  document.getElementById("myRange").addEventListener("input", updateDropdownOptions);
+  updateDropdownOptions();
+</script>
+    
+<script>
+  function logout() {
+    window.location.href = "Example2.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+        // Api key for local development
+        // const apiKey = "a6bf09ec-09a5-4e2d-a142-43e77e87b3d0";
+        // Api key for access to public api at localhost
+        const apiKey =
+          "sp7b0JE3tg6RnhFRVsLVE1Vdsv2o7Riu12qlPHbcAOZPit30PdtIPWNi7gFDOahAB6GWilxWXik7qe5i4CLytIDaUwDOp4LnP00ZrdHS34YqKnXQAfp15TjQjWC3AHGP";
+        
+        const responseDisplay = document.getElementById("responseDisplay");
+        const fetchUserDataButton = document.getElementById("fetchUserData");
+
+        async function getUserAccountData() {
+          const accessToken = localStorage.getItem("accessToken");
+          try {
+            const response = await fetch(`https://bandim.infonest.xyz/api/public/users/me`, {
+              method: "GET",
+              mode: "cors",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+                "X-API-Key": apiKey,
+              },
+            });
+            const data = await response.json();
+            responseDisplay.textContent = "User data retrieved" //JSON.stringify(data, null, 2);
+            responseDisplay.classList.add("custom-text-style");
+          } catch (error) {
+            responseDisplay.textContent = "Failed to fetch user data: " + error.message;
+          }
+        }
+
+        fetchUserDataButton.addEventListener("click", getUserAccountData);
+      });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Retrieve access token
+    const accessToken = localStorage.getItem("accessToken");
+    const apiKey = "sp7b0JE3tg6RnhFRVsLVE1Vdsv2o7Riu12qlPHbcAOZPit30PdtIPWNi7gFDOahAB6GWilxWXik7qe5i4CLytIDaUwDOp4LnP00ZrdHS34YqKnXQAfp15TjQjWC3AHGP";
+
+    // Create a submission button, that when clicked sends the data to the backend
+    const submitButton = document.getElementById("submit-location-data");
+    // Create a clear button that clears the whole list of locations
+    const clearButton = document.getElementById("clear-location-data")
+    const addButton = document.getElementById("add-location");
+
+    // Create a 'global' list that will contain the (current) list of lications
+    // To send to the backend
+    var locationList = [];
+
+    //Create a "close" button and append it to each list item
+    var myNodelist = document.getElementsByTagName("LI");
+    var i;
+    for (i = 0; i < myNodelist.length; i++) {
+      var span = document.createElement("SPAN");
+      var txt = document.createTextNode("\u00D7");
+      span.className = "close";
+      span.appendChild(txt);
+      myNodelist[i].appendChild(span);
+    }
+
+    // Click on a close button to hide the current list item
+    var close = document.getElementsByClassName("close");
+    var i;
+    for (i = 0; i < close.length; i++) {
+      close[i].onclick = function () {
+        var div = this.parentElement;
+        div.style.display = "none";
+        };
+      }
+
+    async function createLocations(locations) {
+      try {
+        const response = await fetch(
+          `https://bandim.infonest.xyz/api/public/locations/bulk_insert`,
+          {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+              "X-API-Key": apiKey,
+            },
+            // TESTING HERE
+            body: JSON.stringify(locationList),
+          }
+        );
+        const data = await response.json();
+        responseDisplay.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseDisplay.textContent =
+        "Failed to insert location data: " + error.message;
+      }
+    }
+
+    // Create a new list item when clicking on the "Add" button
+    function newElement() {
+      var li = document.createElement("li");
+      var inputValue1 = document.getElementById("myInput1").value;
+      var inputValue2 = document.getElementById("myInput2").value;
+
+      // Add new input data to list of locations:
+      // - Latitude: float
+      // - Longitude: float
+      // - demand: int (TODO)
+      // - depot: bool (TODO)
+
+      latlon = { latitude: inputValue1, longitude: inputValue2 };
+      locationList.push(latlon);
+
+      // Add each new item in the web interface
+      var t = document.createTextNode(JSON.stringify(latlon));
+      li.appendChild(t);
+
+      // Check that the input value is not empty
+      if (inputValue1 === "") {
+          alert("You must write something!");
+      } else {
+          document.getElementById("myUL").appendChild(li);
+      }
+      document.getElementById("myInput1").value = "";
+      document.getElementById("myInput2").value = "";
+
+      var span = document.createElement("SPAN");
+      var txt = document.createTextNode("\u00D7");
+      span.className = "close";
+      span.appendChild(txt);
+      li.appendChild(span);
+
+      for (i = 0; i < close.length; i++) {
+        close[i].onclick = function () {
+          var div = this.parentElement;
+          div.style.display = "none";
+        };
+      }
+    }
+
+    function clearLocations() {
+      // Reset the list of locations
+      locationList = [];
+      // Clear list in the webinterface
+      document.getElementById("myUL").innerHTML = "";
+    }
+
+    // Event listeners for the buttons
+    submitButton.addEventListener("click", createLocations);
+    clearButton.addEventListener("click", clearLocations);
+    addButton.addEventListener("click", newElement);
+  });
+
+</script>
+
+
+
+  </body>
+</html>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+
+<script>
+    // Map initialization
+    var map = L.map('map').setView([11.845635991962888, -15.595599489958094], 18);
+
+   //osm layer
+    var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }); 
+    osm.addTo(map);
+
+  var Stadia_AlidadeSatellite = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.{ext}', {
+	minZoom: 0,
+	maxZoom: 20,
+	attribution: '&copy; CNES, Distribution Airbus DS, © Airbus DS, © PlanetObserver (Contains Copernicus Data) | &copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	ext: 'jpg'
+
+});
+Stadia_AlidadeSatellite.addTo(map)
+
+       // Custom red icon
+       var redIcon = L.icon({
+            iconUrl: 'static/images/red_icon.png',
+            iconSize: [40, 40], // size of the icon
+        });
+
+        // Marker with custom red icon
+        var singleMarker = L.marker([11.845635991962888, -15.595599489958094], {icon: redIcon}).addTo(map);
+        var popup = singleMarker.bindPopup("Headquarter").openPopup();
+        popup.addTo(map);
+
+
+// Routing control
+var control = L.Routing.control({
+            waypoints: [
+                L.latLng(11.845635991962888, -15.595599489958094),
+                L.latLng(11.845845342751618, -15.595708789971104),
+                L.latLng(11.846162978113133, -15.595518353130991),
+                L.latLng(11.8463362336092, -15.59479683890577),
+                L.latLng(11.845763965037568, -15.594531300213218),
+                L.latLng(11.845475205211482, -15.594944360401632)
+            ],
+            routeWhileDragging: true
+        }).addTo(map);
+
+map.on('click', function() {
+    if (control._container.style.display === 'none') {
+        control._container.style.display = 'block';
+    } else {
+        control._container.style.display = 'none';
+    }
+});
+</script>
